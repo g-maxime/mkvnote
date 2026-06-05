@@ -71,6 +71,8 @@ Push-Location -Path "${release_directory}/"
     Push-Location -Path "mkvnote_BUILD"
         cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="${release_directory}/mkvnote_ROOT/" ../..
         ninja install
+
+        windeployqt --release --no-compiler-runtime --no-translations "${release_directory}/mkvnote_ROOT/bin/mkvnote-gui.exe"
     Pop-Location
 Pop-Location
 
