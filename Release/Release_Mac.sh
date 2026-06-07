@@ -31,11 +31,10 @@ rm -f "${release_directory}/MKVToolNix-42.0.0.dmg"
 
 rm -fr "${release_directory}/mkvnote_BUILD"
 rm -fr "${release_directory}/mkvnote_ROOT"
+rm -fr "${release_directory}/mkvnote_${version}_Mac.app"
+rm -f "${release_directory}/mkvnote_${version}_Mac.dmg"
 
 rm -f "${release_directory}/mkvnote.entitlements"
-rm -f "${release_directory}/mkvnote.pkg" 
-rm -f "${release_directory}/mkvnote-unsigned.pkg" 
-rm -f "${release_directory}/mkvnote_${version}_Mac.dmg" 
 
 mkdir -p "${release_directory}"/mkvnote_ROOT/usr/local/{bin,lib/mkvnote/bin}
 
@@ -91,35 +90,72 @@ cat - > "${release_directory}/mkvnote.entitlements" << 'EOF'
 </plist>
 EOF
 
+#-----------------------------------------------------------------------
+# Assemble .app bundle
+pushd "${release_directory}/"
+    app_name="mkvnote_${version}_Mac.app"
+    app_contents="${app_name}/Contents"
+
+    mkdir -p "${app_contents}/MacOS"
+    mkdir -p "${app_contents}/Helpers"
+    mkdir -p "${app_contents}/Resources"
+    mkdir -p "${app_contents}/lib/mkvnote"
+
+    cp -a "mkvnote_ROOT/usr/local/bin/mkvnote-gui" "${app_contents}/MacOS/mkvnote-gui"
+    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mediainfo "${app_contents}/Helpers/"
+    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvextract "${app_contents}/Helpers/"
+    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvinfo "${app_contents}/Helpers/"
+    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvmerge "${app_contents}/Helpers/"
+    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvpropedit "${app_contents}/Helpers/"
+
+    ln -sfn ../../Helpers "${app_contents}/lib/mkvnote/bin"
+
+    cat - > "${app_contents}/Info.plist" << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>mkvnote</string>
+    <key>CFBundleExecutable</key>
+    <string>mkvnote-gui</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.github.amiaopensource.mkvnote</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>mkvnote</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>${version}</string>
+    <key>CFBundleVersion</key>
+    <string>${version}</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>11.0</string>
+</dict>
+</plist>
+EOF
+popd
+
 pushd "${release_directory}/"
     if [ -n "${MACOS_CODESIGN_IDENTITY}" ] ; then
-        find  mkvnote_ROOT/usr/local -type f -print0 | while IFS= read -r -d '' f ; do
+        app_name="mkvnote_${version}_Mac.app"
+
+        find "${app_name}/Contents" -type f -print0 | while IFS= read -r -d '' f ; do
             if file "${f}" | grep -q 'Mach-O.*\(executable\|dynamically linked shared library\)' ; then
                 codesign --force --options runtime --timestamp --entitlements mkvnote.entitlements --sign "Developer ID Application: ${MACOS_CODESIGN_IDENTITY}" "${f}"
             fi
         done
-    fi
-popd
 
-#-----------------------------------------------------------------------
-# Package .pkg
-pushd "${release_directory}/"
-    pkgbuild --root mkvnote_ROOT --identifier "com.github.amiaopensource.mkvnote" --version "${version}" "mkvnote.unsigned.pkg"
-popd
-
-#-----------------------------------------------------------------------
-# Sign .pkg
-pushd "${release_directory}/"
-    if [ -n "${MACOS_CODESIGN_IDENTITY}" ] ; then
-        productsign --sign "Developer ID Installer: ${MACOS_CODESIGN_IDENTITY}" "mkvnote.unsigned.pkg" "mkvnote.pkg"
-    else
-        mv -f "mkvnote.unsigned.pkg" "mkvnote.pkg"
+        codesign --force --options runtime --timestamp --entitlements mkvnote.entitlements --sign "Developer ID Application: ${MACOS_CODESIGN_IDENTITY}" "${app_name}"
     fi
 popd
 
 #-----------------------------------------------------------------------
 # Package .dmg
 pushd "${release_directory}/"
+    app_name="mkvnote_${version}_Mac.app"
     tmp_path="$(mktemp -d)"
     trap "rm -rf ${tmp_path}" EXIT
 
@@ -127,7 +163,7 @@ pushd "${release_directory}/"
     tmp_dmg="tmp-mkvnote.dmg"
 
     mkdir -p "${tmp_path}/${tmp_files}"
-    cp -a "mkvnote.pkg" "${tmp_path}/${tmp_files}/"
+    cp -a "${app_name}" "${tmp_path}/${tmp_files}/"
 
     hdiutil create "${tmp_path}/${tmp_dmg}" -ov -fs HFS+ -format UDRW -volname "mkvnote" -srcfolder "${tmp_path}/${tmp_files}"
     hdiutil attach -readwrite -noverify "${tmp_path}/${tmp_dmg}"
@@ -144,7 +180,7 @@ pushd "${release_directory}/"
                 set viewOptions to the icon view options of container window
                 set arrangement of viewOptions to not arranged
                 set icon size of viewOptions to 72
-                set position of item "mkvnote.pkg" of container window to {125, 175}
+                set position of item "'"${app_name}"'" of container window to {125, 175}
                 close
             end tell
         end tell
