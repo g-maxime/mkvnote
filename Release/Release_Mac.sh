@@ -35,6 +35,7 @@ rm -fr "${release_directory}/mkvnote_${version}_Mac.app"
 rm -f "${release_directory}/mkvnote_${version}_Mac.dmg"
 
 rm -f "${release_directory}/mkvnote.entitlements"
+rm -f "${release_directory}/mkvnote.Info.plist"
 
 mkdir -p "${release_directory}"/mkvnote_ROOT/usr/local/{bin,lib/mkvnote/bin}
 
@@ -77,8 +78,7 @@ pushd "${release_directory}/"
 popd
 
 #-----------------------------------------------------------------------
-# Sign binaries
-
+# Assemble .app bundle
 cat - > "${release_directory}/mkvnote.entitlements" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -90,27 +90,7 @@ cat - > "${release_directory}/mkvnote.entitlements" << 'EOF'
 </plist>
 EOF
 
-#-----------------------------------------------------------------------
-# Assemble .app bundle
-pushd "${release_directory}/"
-    app_name="mkvnote_${version}_Mac.app"
-    app_contents="${app_name}/Contents"
-
-    mkdir -p "${app_contents}/MacOS"
-    mkdir -p "${app_contents}/Helpers"
-    mkdir -p "${app_contents}/Resources"
-    mkdir -p "${app_contents}/lib/mkvnote"
-
-    cp -a "mkvnote_ROOT/usr/local/bin/mkvnote-gui" "${app_contents}/MacOS/mkvnote-gui"
-    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mediainfo "${app_contents}/Helpers/"
-    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvextract "${app_contents}/Helpers/"
-    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvinfo "${app_contents}/Helpers/"
-    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvmerge "${app_contents}/Helpers/"
-    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvpropedit "${app_contents}/Helpers/"
-
-    ln -sfn ../../Helpers "${app_contents}/lib/mkvnote/bin"
-
-    cat - > "${app_contents}/Info.plist" << 'EOF'
+cat - > "${release_directory}/mkvnote.Info.plist" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -136,8 +116,27 @@ pushd "${release_directory}/"
 </dict>
 </plist>
 EOF
+
+pushd "${release_directory}/"
+    app_name="mkvnote_${version}_Mac.app"
+    app_contents="${app_name}/Contents"
+
+    mkdir -p "${app_contents}/MacOS"
+    mkdir -p "${app_contents}/Helpers"
+    mkdir -p "${app_contents}/Resources"
+
+    cp -a "mkvnote_ROOT/usr/local/bin/mkvnote-gui" "${app_contents}/MacOS/mkvnote-gui"
+    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mediainfo "${app_contents}/Helpers/"
+    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvextract "${app_contents}/Helpers/"
+    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvinfo "${app_contents}/Helpers/"
+    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvmerge "${app_contents}/Helpers/"
+    cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvpropedit "${app_contents}/Helpers/"
+
+    cp -a mkvnote.Info.plist "${app_contents}/Info.plist"
 popd
 
+#-----------------------------------------------------------------------
+# Sign .app bundle
 pushd "${release_directory}/"
     if [ -n "${MACOS_CODESIGN_IDENTITY}" ] ; then
         app_name="mkvnote_${version}_Mac.app"
