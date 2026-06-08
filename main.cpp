@@ -13,15 +13,9 @@ int main(int argc, char *argv[])
     app.setOrganizationName("NMAAHC");
 
     #ifdef Q_OS_MAC
-    QDir binDir = QCoreApplication::applicationDirPath() + "/../Helpers";
+    QDir binDir("/usr/local/lib/mkvnote/bin");
     if (binDir.exists()) {
         qputenv("PATH", (binDir.absolutePath() + ":" + qgetenv("PATH")).toLocal8Bit());
-    }
-    else {
-        binDir = QCoreApplication::applicationDirPath() + "/../lib/mkvnote/bin";
-        if (binDir.exists()) {
-            qputenv("PATH", (binDir.absolutePath() + ":" + qgetenv("PATH")).toLocal8Bit());
-        }
     }
     #endif
 

@@ -2,6 +2,9 @@
 ; Request application privileges for Windows Vista
 RequestExecutionLevel admin
 
+; Enable high-DPI support
+ManifestDPIAware true
+
 ; Some defines
 !define PRODUCT_NAME "mkvnote"
 !define PRODUCT_PUBLISHER "MediaArea.net"
@@ -47,9 +50,16 @@ SetCompressor /FINAL /SOLID lzma
 !define MUI_LANGDLL_REGISTRY_KEY "${PRODUCT_UNINST_KEY}"
 !define MUI_LANGDLL_REGISTRY_VALUENAME "NSIS:Language"
 
+; Function to launch program with same integrity level as Windows Explorer
+Function LaunchAsCurrentUser
+  Exec '"$WINDIR\explorer.exe" "$INSTDIR\mkvnote-gui.exe"'
+FunctionEnd
+
 ; Installer pages
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
+!define MUI_FINISHPAGE_RUN
+!define MUI_FINISHPAGE_RUN_FUNCTION "LaunchAsCurrentUser"
 !insertmacro MUI_PAGE_FINISH
 ; Uninstaller pages
 !insertmacro MUI_UNPAGE_WELCOME
