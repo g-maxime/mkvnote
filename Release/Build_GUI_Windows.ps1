@@ -53,7 +53,7 @@ Pop-Location
 #-----------------------------------------------------------------------
 # Get MkvToolnix
 Push-Location -Path "${release_directory}/"
-    curl.exe -L "https://mkvtoolnix.download/windows/releases/42.0.0/mkvtoolnix-64-bit-42.0.0.7z" -o "mkvtoolnix.7z"
+    curl.exe -L "https://mkvtoolnix.download/windows/releases/99.0/mkvtoolnix-64-bit-99.0.7z" -o "mkvtoolnix.7z"
     7z.exe x "mkvtoolnix.7z"
 
     Copy-Item -Force -Path "${release_directory}/mkvtoolnix/mkvextract.exe" -Destination "${release_directory}/mkvnote_ROOT/bin/mkvextract.exe"

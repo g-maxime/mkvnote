@@ -27,11 +27,11 @@ rm -fr "${release_directory}/mediainfo_ROOT"
 rm -f "${release_directory}/MediaInfo.dmg"
 rm -f "${release_directory}/mediainfo.pkg"
 
-rm -f "${release_directory}/MKVToolNix-42.0.0.dmg"
+rm -f "${release_directory}/MKVToolNix-99.0-1-universal.dmg"
 
 rm -fr "${release_directory}/mkvnote_BUILD"
 rm -fr "${release_directory}/mkvnote_ROOT"
-rm -fr "${release_directory}/mkvnote_${version}_Mac.app"
+rm -fr "${release_directory}/mkvnote.app"
 rm -f "${release_directory}/mkvnote_${version}_Mac.dmg"
 
 rm -f "${release_directory}/mkvnote.entitlements"
@@ -57,14 +57,14 @@ popd
 #-----------------------------------------------------------------------
 # Get MKVToolNix
 pushd "${release_directory}/"
-    curl -L https://mkvtoolnix.download/macos/MKVToolNix-42.0.0.dmg -o MKVToolNix-42.0.0.dmg
+    curl -L https://mkvtoolnix.download/macos/releases/99.0/MKVToolNix-99.0-1-universal.dmg -o MKVToolNix-99.0-1-universal.dmg
 
-    hdiutil attach -noverify MKVToolNix-42.0.0.dmg
-    cp -a "/Volumes/MKVToolNix-42.0.0/MKVToolNix-42.0.0.app/Contents/MacOS/mkvextract" mkvnote_ROOT/usr/local/lib/mkvnote/bin
-    cp -a "/Volumes/MKVToolNix-42.0.0/MKVToolNix-42.0.0.app/Contents/MacOS/mkvinfo" mkvnote_ROOT/usr/local/lib/mkvnote/bin
-    cp -a "/Volumes/MKVToolNix-42.0.0/MKVToolNix-42.0.0.app/Contents/MacOS/mkvmerge" mkvnote_ROOT/usr/local/lib/mkvnote/bin
-    cp -a "/Volumes/MKVToolNix-42.0.0/MKVToolNix-42.0.0.app/Contents/MacOS/mkvpropedit" mkvnote_ROOT/usr/local/lib/mkvnote/bin
-    hdiutil detach "/Volumes/MKVToolNix-42.0.0"
+    hdiutil attach -noverify MKVToolNix-99.0-1-universal.dmg
+    cp -a "/Volumes/MKVToolNix-99.0-1-universal/MKVToolNix.app/Contents/MacOS/mkvextract" mkvnote_ROOT/usr/local/lib/mkvnote/bin
+    cp -a "/Volumes/MKVToolNix-99.0-1-universal/MKVToolNix.app/Contents/MacOS/mkvinfo" mkvnote_ROOT/usr/local/lib/mkvnote/bin
+    cp -a "/Volumes/MKVToolNix-99.0-1-universal/MKVToolNix.app/Contents/MacOS/mkvmerge" mkvnote_ROOT/usr/local/lib/mkvnote/bin
+    cp -a "/Volumes/MKVToolNix-99.0-1-universal/MKVToolNix.app/Contents/MacOS/mkvpropedit" mkvnote_ROOT/usr/local/lib/mkvnote/bin
+    hdiutil detach "/Volumes/MKVToolNix-99.0-1-universal"
 popd
 
 #-----------------------------------------------------------------------
@@ -118,14 +118,13 @@ cat - > "${release_directory}/mkvnote.Info.plist" << 'EOF'
 EOF
 
 pushd "${release_directory}/"
-    app_name="mkvnote_${version}_Mac.app"
-    app_contents="${app_name}/Contents"
+    app_contents="mkvnote.app/Contents"
 
     mkdir -p "${app_contents}/MacOS"
     mkdir -p "${app_contents}/Helpers"
     mkdir -p "${app_contents}/Resources"
 
-    cp -a "mkvnote_ROOT/usr/local/bin/mkvnote-gui" "${app_contents}/MacOS/mkvnote-gui"
+    cp -a mkvnote_ROOT/usr/local/bin/mkvnote-gui "${app_contents}/MacOS/mkvnote-gui"
     cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mediainfo "${app_contents}/Helpers/"
     cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvextract "${app_contents}/Helpers/"
     cp -a mkvnote_ROOT/usr/local/lib/mkvnote/bin/mkvinfo "${app_contents}/Helpers/"
@@ -139,22 +138,15 @@ popd
 # Sign .app bundle
 pushd "${release_directory}/"
     if [ -n "${MACOS_CODESIGN_IDENTITY}" ] ; then
-        app_name="mkvnote_${version}_Mac.app"
-
-        find "${app_name}/Contents" -type f -print0 | while IFS= read -r -d '' f ; do
-            if file "${f}" | grep -q 'Mach-O.*\(executable\|dynamically linked shared library\)' ; then
-                codesign --force --options runtime --timestamp --entitlements mkvnote.entitlements --sign "Developer ID Application: ${MACOS_CODESIGN_IDENTITY}" "${f}"
-            fi
-        done
-
-        codesign --force --options runtime --timestamp --entitlements mkvnote.entitlements --sign "Developer ID Application: ${MACOS_CODESIGN_IDENTITY}" "${app_name}"
+        codesign --force --options runtime --timestamp --entitlements mkvnote.entitlements --sign "Developer ID Application: ${MACOS_CODESIGN_IDENTITY}" "mkvnote.app"/Contents/MacOS/mkvnote-gui
+        codesign --force --options runtime --timestamp --entitlements mkvnote.entitlements --sign "Developer ID Application: ${MACOS_CODESIGN_IDENTITY}" "mkvnote.app"/Contents/Helpers/*
+        codesign --force --options runtime --timestamp --entitlements mkvnote.entitlements --sign "Developer ID Application: ${MACOS_CODESIGN_IDENTITY}" "mkvnote.app"
     fi
 popd
 
 #-----------------------------------------------------------------------
 # Package .dmg
 pushd "${release_directory}/"
-    app_name="mkvnote_${version}_Mac.app"
     tmp_path="$(mktemp -d)"
     trap "rm -rf ${tmp_path}" EXIT
 
@@ -162,7 +154,7 @@ pushd "${release_directory}/"
     tmp_dmg="tmp-mkvnote.dmg"
 
     mkdir -p "${tmp_path}/${tmp_files}"
-    cp -a "${app_name}" "${tmp_path}/${tmp_files}/"
+    cp -a "mkvnote.app" "${tmp_path}/${tmp_files}/"
 
     hdiutil create "${tmp_path}/${tmp_dmg}" -ov -fs HFS+ -format UDRW -volname "mkvnote" -srcfolder "${tmp_path}/${tmp_files}"
     hdiutil attach -readwrite -noverify "${tmp_path}/${tmp_dmg}"
@@ -179,7 +171,7 @@ pushd "${release_directory}/"
                 set viewOptions to the icon view options of container window
                 set arrangement of viewOptions to not arranged
                 set icon size of viewOptions to 72
-                set position of item "'"${app_name}"'" of container window to {125, 175}
+                set position of item "mkvnote.app" of container window to {125, 175}
                 close
             end tell
         end tell
